@@ -116,7 +116,7 @@ function setScreenMessage(n,title,subtitle) {
   mat.color.set(0xffffff);
   mat.needsUpdate=true;
 }
-let remoteVideo=null, remoteTexture=null;
+let remoteVideo=null, remoteTexture=null, remoteShareActive=false;
 function clearRemoteVideo() {
   if(remoteVideo) { remoteVideo.pause(); remoteVideo.srcObject=null; remoteVideo=null; }
   if(remoteTexture) { remoteTexture.dispose(); remoteTexture=null; }
@@ -211,9 +211,11 @@ const client=new RoomClient({
     if(s==='connected' && client.videoTrack) client.send({type:'share-state',active:true});
   },
   onPeerPose:updateRemotePose,
-  onPeerLeft:()=>{remoteAvatar.visible=false;clearRemoteVideo();},
+  onPeerLeft:()=>{remoteAvatar.visible=false;remoteShareActive=false;clearRemoteVideo();},
   onRemoteShareState:active=>{
-    if(!active) {
+    remoteShareActive=active;
+    if(active && client.remoteStream.getVideoTracks().length) showRemoteMedia(client.remoteStream);
+    else {
       clearRemoteVideo();
       if(client.role) setScreenMessage(client.role===1?2:1,'AWAITING FEED','PEER MUST CHOOSE TO SHARE');
     }
@@ -222,7 +224,7 @@ const client=new RoomClient({
     const audio=stream?.getAudioTracks()||[];
     audioPlayback.srcObject=audio.length?new MediaStream(audio):null;
     if(audio.length) audioPlayback.play().catch(()=>note('Tap to unlock peer audio playback.'));
-    if(stream && stream.getVideoTracks().length) showRemoteMedia(stream);
+    if(remoteShareActive && stream && stream.getVideoTracks().length) showRemoteMedia(stream);
     else {clearRemoteVideo(); if(client.role) setScreenMessage(client.role===1?2:1,'AWAITING FEED','NO VIDEO TRACK');}
   },
 });

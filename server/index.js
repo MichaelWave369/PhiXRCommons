@@ -62,10 +62,10 @@ export async function createSignalingServer({ port = 8787, host = '127.0.0.1' } 
         send(peer, { type: 'signal', payload: p });
       } else if (msg.type === 'pose') {
         if (now - ws.lastPose < 60) return;
-        ws.lastPose = now;
         const p = msg.pose;
         const valid = n => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 100;
         if (!p || ![p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw].every(valid)) return;
+        ws.lastPose = now;
         send(peer, { type: 'pose', pose: {
           x:p.x,y:p.y,z:p.z,qx:p.qx,qy:p.qz,qw:p.qw,
           hands: Array.isArray(p.hands) ? p.hands.slice(0,2).filter(h => h && [h.x,h.y,h.z].every(valid)).map(h => ({x:h.x,y:h.y,z:h.z})) : []
