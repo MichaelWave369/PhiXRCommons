@@ -12,24 +12,37 @@
   <div id="world" aria-label="Three-dimensional virtual commons"></div>
   <header class="brand"><span class="glyph">Φ</span><span>XR <strong>COMMONS</strong><small>ENTER THE FIELD</small></span></header>
   <aside class="controls">
-    <div class="eyebrow"><span class="pulse"></span> FIELD ACCESS / RUNG 1</div>
+    <div class="eyebrow"><span class="pulse"></span> FIELD ACCESS / RUNG 2</div>
     <h1>One space.<br><em>Two realities.</em></h1>
     <p class="intro">Join a shared virtual lounge, see a friend's avatar, talk, and watch their opt-in video feed on a room-sized screen.</p>
     <label for="server-url">SIGNALING SERVER <small>WSS ENDPOINT</small></label>
     <input id="server-url" autocomplete="url" spellcheck="false" placeholder="wss://your-host.example" />
+    <details class="advanced">
+      <summary>ADVANCED CONNECTION / STUN + TURN</summary>
+      <p>Google STUN is the default external discovery service. Replace it with your own, or add a TURN relay for difficult networks. Credentials remain only in this page's memory.</p>
+      <label for="stun-url">STUN SERVER</label>
+      <input id="stun-url" spellcheck="false" value="stun:stun.l.google.com:19302" />
+      <label for="turn-url">TURN RELAY <small>OPTIONAL</small></label>
+      <input id="turn-url" spellcheck="false" placeholder="turns:relay.example:5349?transport=tcp" />
+      <label for="turn-user">TURN USER</label>
+      <input id="turn-user" spellcheck="false" autocomplete="off" placeholder="Ephemeral credential" />
+      <label for="turn-pass">TURN PASSWORD</label>
+      <input id="turn-pass" type="password" autocomplete="off" placeholder="Ephemeral credential" />
+    </details>
     <label for="room-code">ROOM CODE <small>EIGHT CHARACTERS</small></label>
-    <div class="input-row"><input id="room-code" maxlength="8" spellcheck="false" autocapitalize="characters" placeholder="Generate a code" /><button type="button" id="generate" aria-label="Generate room code">↻</button></div>
+    <div class="input-row"><input id="room-code" maxlength="8" spellcheck="false" autocapitalize="characters" placeholder="Generate a code" /><button type="button" id="generate" aria-label="Generate room code">↻</button><button type="button" id="copy-room" aria-label="Copy room code">COPY</button></div>
     <label for="display-name">DISPLAY NAME</label>
     <input id="display-name" maxlength="24" autocomplete="nickname" placeholder="Explorer" />
     <div class="button-row"><button type="button" id="join" class="primary">JOIN COMMONS ↗</button><button type="button" id="leave" disabled>LEAVE</button></div>
     <div class="status-line"><span id="status-dot"></span><span id="connection-status" role="status" aria-live="polite">Offline gallery mode</span></div>
+    <div class="diagnostics"><span>WEBRTC <strong id="rtc-state">IDLE</strong></span><span>ICE <strong id="ice-state">IDLE</strong></span></div>
     <hr />
     <div class="section-heading">LIVE CONNECTIONS <span id="seat-count">0 / 2</span></div>
     <div class="seat"><span>01</span><div><strong id="seat-one">Awaiting explorer</strong><small>LEFT DISPLAY</small></div></div>
     <div class="seat"><span>02</span><div><strong id="seat-two">Awaiting explorer</strong><small>RIGHT DISPLAY</small></div></div>
     <div class="button-row"><button id="mic" type="button" disabled>MIC OFF</button><button id="share" type="button" disabled>SHARE VIEW</button></div>
     <button id="share-window" class="wide" type="button" disabled>SHARE WINDOW / TAB</button>
-    <p class="notice">Share View is <strong>experimental app-canvas capture</strong>, not a full Quest headset feed. Window/tab capture needs browser support. Neither feature captures anything until you choose it.</p>
+    <p class="notice">Share View is <strong>experimental app-canvas capture</strong>, not a full Quest headset feed. Window/tab capture needs browser support. Neither feature captures anything until you choose it. If ICE stays failed, verify TURN relay settings. TURN is not hosted by GitHub Pages.</p>
     <div id="message" role="status" aria-live="polite" class="message">Explore by mouse, or enter VR using the headset button.</div>
   </aside>
   <footer>Φ369 LABS <span>·</span> OPEN SOURCE <span>·</span> PEOPLE ABOVE PROFIT <a href="https://github.com/MichaelWave369/PhiXRCommons" rel="noopener noreferrer" target="_blank">SOURCE ↗</a></footer>
