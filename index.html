@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <meta name="theme-color" content="#08101f" />
+  <meta name="description" content="Phi XR Commons: two headsets, one shared WebXR lounge." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>Φ XR Commons | Enter the Field</title>
+</head>
+<body>
+  <div id="world" aria-label="Three-dimensional virtual commons"></div>
+  <header class="brand"><span class="glyph">Φ</span><span>XR <strong>COMMONS</strong><small>ENTER THE FIELD</small></span></header>
+  <aside class="controls">
+    <div class="eyebrow"><span class="pulse"></span> FIELD ACCESS / RUNG 1</div>
+    <h1>One space.<br><em>Two realities.</em></h1>
+    <p class="intro">Join a shared virtual lounge, see a friend's avatar, talk, and watch their opt-in video feed on a room-sized screen.</p>
+    <label for="server-url">SIGNALING SERVER <small>WSS ENDPOINT</small></label>
+    <input id="server-url" autocomplete="url" spellcheck="false" placeholder="wss://your-host.example" />
+    <label for="room-code">ROOM CODE <small>EIGHT CHARACTERS</small></label>
+    <div class="input-row"><input id="room-code" maxlength="8" spellcheck="false" autocapitalize="characters" placeholder="Generate a code" /><button type="button" id="generate" aria-label="Generate room code">↻</button></div>
+    <label for="display-name">DISPLAY NAME</label>
+    <input id="display-name" maxlength="24" autocomplete="nickname" placeholder="Explorer" />
+    <div class="button-row"><button type="button" id="join" class="primary">JOIN COMMONS ↗</button><button type="button" id="leave" disabled>LEAVE</button></div>
+    <div class="status-line"><span id="status-dot"></span><span id="connection-status" role="status" aria-live="polite">Offline gallery mode</span></div>
+    <hr />
+    <div class="section-heading">LIVE CONNECTIONS <span id="seat-count">0 / 2</span></div>
+    <div class="seat"><span>01</span><div><strong id="seat-one">Awaiting explorer</strong><small>LEFT DISPLAY</small></div></div>
+    <div class="seat"><span>02</span><div><strong id="seat-two">Awaiting explorer</strong><small>RIGHT DISPLAY</small></div></div>
+    <div class="button-row"><button id="mic" type="button" disabled>MIC OFF</button><button id="share" type="button" disabled>SHARE VIEW</button></div>
+    <button id="share-window" class="wide" type="button" disabled>SHARE WINDOW / TAB</button>
+    <p class="notice">Share View is <strong>experimental app-canvas capture</strong>, not a full Quest headset feed. Window/tab capture needs browser support. Neither feature captures anything until you choose it.</p>
+    <div id="message" role="status" aria-live="polite" class="message">Explore by mouse, or enter VR using the headset button.</div>
+  </aside>
+  <footer>Φ369 LABS <span>·</span> OPEN SOURCE <span>·</span> PEOPLE ABOVE PROFIT <a href="https://github.com/MichaelWave369/PhiXRCommons" rel="noopener noreferrer" target="_blank">SOURCE ↗</a></footer>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
