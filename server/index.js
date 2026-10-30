@@ -17,7 +17,13 @@ export async function createSignalingServer({ port = 8787, host = '127.0.0.1' } 
   function leave(ws) {
     if (!ws.room) return;
     const remaining = (rooms.get(ws.room) || []).filter(other => other !== ws);
-    if (remaining.length) { rooms.set(ws.room, remaining); send(remaining[0], { type: 'peer-left' }); }
+    if (remaining.length) {
+      // Always promote the remaining explorer to seat 1 so the next pairing
+      // has exactly one WebRTC offer initiator, even when the original host exits.
+      remaining[0].role = 1;
+      rooms.set(ws.room, remaining);
+      send(remaining[0], { type: 'peer-left', role: 1 });
+    }
     else rooms.delete(ws.room);
     ws.room = null;
   }
