@@ -2,12 +2,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { RoomClient, createRoomCode, normalizeRoom } from './network.js';
+import { readThumbstick, snapTurnStep } from './locomotion.js';
 import './style.css';
 
 const $ = id => document.getElementById(id);
 const ui = {
   url: $('server-url'), room: $('room-code'), name: $('display-name'),
-  join: $('join'), leave: $('leave'), generate: $('generate'),
+  join: $('join'), leave: $('leave'), generate: $('generate'), copyRoom: $('copy-room'),
+  stunUrl: $('stun-url'), turnUrl: $('turn-url'), turnUser: $('turn-user'), turnPass: $('turn-pass'),
+  rtc: $('rtc-state'), ice: $('ice-state'),
   mic: $('mic'), share: $('share'), shareWindow: $('share-window'),
   status: $('connection-status'), dot: $('status-dot'), count: $('seat-count'),
   seat1: $('seat-one'), seat2: $('seat-two'), message: $('message'),
@@ -160,6 +163,12 @@ createConsoleButton('MICROPHONE',2.6,()=>toggleMic());
 createConsoleButton('SHARE VIEW',4.4,()=>toggleShare());
 createConsoleButton('STOP SHARE',6.2,()=>{ if(client.videoTrack) toggleShare(); });
 textPlane(scene,'FIELD CONSOLE','POINT + TRIGGER',4,.55,4.4,2,-1.1,'#85c8fc');
+const statusBoard=textPlane(scene,'FIELD LINK','OFFLINE · EXPLORE THE GALLERY',3.8,.72,0,3.8,-5.2,'#79eee6');
+function updateFieldBoard(title,subtitle) {
+  statusBoard.material.map?.dispose();
+  statusBoard.material.map=textTexture(title,subtitle);
+  statusBoard.material.needsUpdate=true;
+}
 
 // Synchronized remote head pose uses bounded offsets from a fixed opposite seat.
 function updateRemotePose(p) {
@@ -178,6 +187,15 @@ function updateRemotePose(p) {
 }
 
 function note(text) { ui.message.textContent=text; }
+let rtcPhase='idle', icePhase='idle';
+function diagnostics() {
+  ui.rtc.textContent=rtcPhase.toUpperCase();
+  ui.ice.textContent=icePhase.toUpperCase();
+  if(icePhase==='failed') {
+    updateFieldBoard('ICE CONNECTION FAILED','CHECK STUN/TURN CONFIGURATION');
+    note('ICE failed: the headsets may need a TURN relay. Check the Advanced Connection settings and rejoin.');
+  }
+}
 function status(info) {
   const joined=info.phase==='joined'||info.phase==='paired';
   ui.dot.classList.toggle('online',joined);
@@ -188,6 +206,10 @@ function status(info) {
   ui.shareWindow.disabled=!joined||!navigator.mediaDevices?.getDisplayMedia;
   ui.count.textContent=(info.count||0)+' / 2';
   ui.status.textContent=info.phase==='connecting'?'Connecting to signal server…':joined?'Connected to room '+info.room:'Offline gallery mode';
+  if(!joined) {
+    rtcPhase='idle'; icePhase='idle'; diagnostics();
+    updateFieldBoard(info.phase==='connecting'?'LINKING ROOM':'FIELD LINK',info.phase==='connecting'?'CONNECTING TO SIGNAL SERVER':'OFFLINE · EXPLORE THE GALLERY');
+  } else updateFieldBoard('ROOM '+info.room,info.count===2?'TWO EXPLORERS LINKED':'WAITING FOR SECOND EXPLORER');
   if(!joined) {
     remoteAvatar.visible=false; ui.seat1.textContent='Awaiting explorer'; ui.seat2.textContent='Awaiting explorer';
     ui.mic.textContent='MIC OFF'; ui.share.textContent='SHARE VIEW';
@@ -201,14 +223,28 @@ function status(info) {
   }
   remoteAvatar.visible=info.count===2;
   setScreenMessage(info.role,'YOUR STATION',client.videoTrack?'BROADCASTING':'READY TO SHARE');
+  if(info.count===1) {
+    setScreenMessage(info.role===1?2:1,'AWAITING PEER','JOIN USING SAME ROOM CODE');
+  }
   note(info.count===2?'Peer arrived! WebRTC negotiating…':'Room joined. Share the code with the second Quest.');
 }
 const client=new RoomClient({
   onStatus:status,
   onError: note,
   onConnection: s => {
-    note(s==='connected'?'Peer-to-peer connection established.': 'WebRTC: '+s);
+    rtcPhase=s; diagnostics();
+    if(s==='connected') {
+      updateFieldBoard('PEER CONNECTED','VOICE + VIDEO READY WHEN SHARED');
+      note('Peer-to-peer connection established.');
+    } else if(s==='failed') {
+      updateFieldBoard('PEER CONNECTION FAILED','CHECK SIGNAL AND TURN RELAY');
+      note('WebRTC failed. Try a TURN relay in Advanced Connection and rejoin.');
+    } else note('WebRTC: '+s);
     if(s==='connected' && client.videoTrack) client.send({type:'share-state',active:true});
+  },
+  onIceStatus: s => {
+    icePhase=s;
+    diagnostics();
   },
   onPeerPose:updateRemotePose,
   onPeerLeft:()=>{remoteAvatar.visible=false;remoteShareActive=false;clearRemoteVideo();},
@@ -229,11 +265,23 @@ const client=new RoomClient({
   },
 });
 ui.generate.addEventListener('click',()=>{ui.room.value=createRoomCode();});
+ui.copyRoom.addEventListener('click',async()=>{
+  try {
+    const code=normalizeRoom(ui.room.value);
+    if(!/^[A-Z0-9]{8}$/.test(code)) throw new Error('Generate or enter an eight-character room code first.');
+    await navigator.clipboard.writeText(code);
+    note('Room code copied. Only share it with your invited explorer.');
+  } catch(e){ note('Copy failed: '+e.message); }
+});
 ui.join.addEventListener('click',async()=>{
   try {
     const room=normalizeRoom(ui.room.value||createRoomCode()); ui.room.value=room;
     const url=ui.url.value.trim();
     if(!url) throw new Error('Enter your self-hosted wss:// signaling address first.');
+    client.setIceServers({
+      stunUrl:ui.stunUrl.value,turnUrl:ui.turnUrl.value,
+      turnUsername:ui.turnUser.value,turnCredential:ui.turnPass.value
+    });
     await client.connect(url,room,ui.name.value);
   } catch(e) {note(e.message);}
 });
@@ -299,25 +347,54 @@ for(let i=0;i<2;i++){
   controllers.push(c);
 }
 const tempPos=new THREE.Vector3(),tempQ=new THREE.Quaternion();
-let lastPose=0;
+const moveForward=new THREE.Vector3(), moveRight=new THREE.Vector3(), upAxis=new THREE.Vector3(0,1,0);
+const beforeTurn=new THREE.Vector3(), afterTurn=new THREE.Vector3();
+let lastPose=0, lastFrameTime=0, turnArmed=true;
+renderer.xr.addEventListener('sessionstart',()=>{
+  turnArmed=true;
+  lastFrameTime=0;
+  note('Quest comfort: left stick moves; right stick snap turns 30°. Trigger selects console buttons.');
+});
+renderer.xr.addEventListener('sessionend',()=>{ lastFrameTime=0; turnArmed=true; });
 renderer.setAnimationLoop((time,frame)=>{
   const sec=time*.001;
   central.rotation.y=sec*.19;
   central.rotation.z=sec*.11;
   centralRing.rotation.y=sec*.15;
   halo.rotation.z=sec*.3;
+  const dt=lastFrameTime?Math.min((time-lastFrameTime)/1000,0.05):0;
+  lastFrameTime=time;
   if(!renderer.xr.isPresenting) orbit.update();
   else {
     const session=renderer.xr.getSession();
-    const sources=session?.inputSources||[];
-    for(const source of sources){
-      if(!source.gamepad) continue;
-      const axes=source.gamepad.axes;
-      const x=axes.length>2?axes[2]:axes[0]||0;
-      const y=axes.length>3?axes[3]:axes[1]||0;
-      // Slow locomotion for headset comfort. Snap/smooth turning comes later.
-      if(Math.abs(x)>.18) rig.position.x+=x*.02;
-      if(Math.abs(y)>.18) rig.position.z+=y*.02;
+    const sources=Array.from(session?.inputSources||[]);
+    const left=sources.find(s=>s.handedness==='left'&&s.gamepad);
+    const right=sources.find(s=>s.handedness==='right'&&s.gamepad);
+    const xrView=renderer.xr.getCamera(camera);
+    if(left&&dt>0) {
+      const stick=readThumbstick(left.gamepad.axes);
+      if(stick.x||stick.y){
+        xrView.getWorldDirection(moveForward);
+        moveForward.y=0;
+        if(moveForward.lengthSq()>0.01){
+          moveForward.normalize();
+          moveRight.copy(moveForward).cross(upAxis).normalize();
+          rig.position.addScaledVector(moveRight,stick.x*dt*1.45);
+          rig.position.addScaledVector(moveForward,-stick.y*dt*1.45);
+          rig.position.x=THREE.MathUtils.clamp(rig.position.x,-8,8);
+          rig.position.z=THREE.MathUtils.clamp(rig.position.z,-9.5,6.5);
+        }
+      }
+    }
+    const turnAxis=right?readThumbstick(right.gamepad.axes).x:0;
+    const turn=snapTurnStep(turnAxis,turnArmed);
+    turnArmed=turn.armed;
+    if(turn.degrees) {
+      xrView.getWorldPosition(beforeTurn);
+      rig.rotation.y+=THREE.MathUtils.degToRad(turn.degrees);
+      rig.updateMatrixWorld(true);
+      xrView.getWorldPosition(afterTurn);
+      rig.position.add(beforeTurn.sub(afterTurn));
     }
   }
   if(client.role && time-lastPose>=110){
