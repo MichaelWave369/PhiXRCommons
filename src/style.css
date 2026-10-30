@@ -23,3 +23,13 @@ footer{position:fixed;z-index:2;left:35px;bottom:20px;font:10px "Space Grotesk",
 #VRButton{position:fixed!important;right:32px!important;left:auto!important;bottom:24px!important;z-index:5!important;background:#33dccabf!important;border:1px solid #85ffeb!important;color:#051b25!important;font:700 12px "Space Grotesk",sans-serif!important;opacity:1!important}
 @media(max-height:650px){.controls{top:72px;bottom:50px;padding:15px 19px}.controls h1{font-size:23px;margin:11px 0}.intro{margin-bottom:12px}.brand{top:14px}}
 @media(max-width:760px){.brand{left:15px;top:15px;font-size:14px}.glyph{width:35px;height:35px;font-size:26px}.controls{top:68px;bottom:68px;left:12px;width:min(340px,calc(100% - 24px));padding:18px}footer{left:15px;bottom:14px;font-size:8px}footer a{display:none}#VRButton{right:12px!important;bottom:12px!important}}
+
+/* Rung 2: compact optional networking controls and readable RTC telemetry. */
+.advanced{margin-top:13px;border:1px solid #345367;background:#071521a3;border-radius:8px;padding:9px 11px}
+.advanced summary{cursor:pointer;color:#8ce8de;font:700 10px "Space Grotesk",sans-serif;letter-spacing:.09em;list-style-position:inside}
+.advanced p{font-size:10px;line-height:1.55;color:#98b6c0;margin:10px 2px}
+.advanced label{margin:11px 0 5px}
+.advanced input{font-size:11px}
+.input-row button{padding-left:10px;padding-right:10px;white-space:nowrap}
+.diagnostics{display:flex;justify-content:space-between;gap:12px;border:1px solid #32586b6e;border-radius:6px;background:#0a1f2c92;padding:8px 11px;margin:10px 0;font:10px "Space Grotesk",sans-serif;letter-spacing:.07em;color:#7ea9b4}
+.diagnostics strong{color:#6be9d7;margin-left:5px}
