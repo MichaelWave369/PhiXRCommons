@@ -1,3 +1,4 @@
+import { makeIceServers } from './ice-config.js';
 /* Room coordination over WebSocket; media is encrypted peer-to-peer WebRTC. */
 export function normalizeRoom(value) {
   return String(value || '').trim().toUpperCase();
@@ -21,6 +22,11 @@ export class RoomClient {
     this.audioTrack = null;
     this.remoteStream = new MediaStream();
     this.pendingCandidates = [];
+    this.iceServers = makeIceServers();
+  }
+  setIceServers(config) {
+    if (this.socket || this.pc) throw new Error('ICE settings can only change before joining.');
+    this.iceServers = makeIceServers(config);
   }
   emit(event, data) { this.callbacks[event]?.(data); }
   send(data) {
@@ -76,6 +82,7 @@ export class RoomClient {
       case 'share-state': this.emit('onRemoteShareState', Boolean(msg.active)); return;
       case 'peer-left':
         this.closePeer();
+        this.role = msg.role === 1 ? 1 : this.role;
         this.peerName = null;
         this.emit('onPeerLeft');
         this.emit('onStatus', { phase: 'joined', role: this.role, room: this.room, count: 1 });
@@ -89,7 +96,7 @@ export class RoomClient {
   }
   ensurePeer() {
     if (this.pc) return this.pc;
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    const pc = new RTCPeerConnection({ iceServers: this.iceServers });
     this.pc = pc;
     pc.addTransceiver('audio', { direction: 'sendrecv' });
     pc.addTransceiver('video', { direction: 'sendrecv' });
@@ -97,9 +104,17 @@ export class RoomClient {
       if (e.candidate) this.send({ type: 'signal', payload: { candidate: e.candidate.toJSON() } });
     };
     pc.onconnectionstatechange = () => this.emit('onConnection', pc.connectionState);
+    pc.oniceconnectionstatechange = () => this.emit('onIceStatus', pc.iceConnectionState);
     pc.ontrack = e => {
       if (!this.remoteStream.getTracks().includes(e.track)) this.remoteStream.addTrack(e.track);
-      this.emit('onRemoteStream', this.remoteStream);
+      // A pre-negotiated track starts muted: ontrack fires only once, but its
+      // underlying sender can later start/stop via replaceTrack(). Recheck on
+      // unmute and mute so late-started sharing reaches the in-world display.
+      const changed = () => this.emit('onRemoteStream', this.remoteStream);
+      e.track.addEventListener('unmute', changed);
+      e.track.addEventListener('mute', changed);
+      e.track.addEventListener('ended', changed);
+      changed();
     };
     this.attachMedia().catch(e => this.emit('onError', e.message));
     return pc;
