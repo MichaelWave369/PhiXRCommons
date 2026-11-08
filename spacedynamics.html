@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#07101d" />
+  <meta name="description" content="PhiSpace Dynamics: open, addressable, illustrative 3D physics lab for desktop and WebXR." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>ΦSpace Dynamics | XR Commons</title>
+</head>
+<body>
+  <div id="space" aria-label="Interactive three-dimensional spatial physics laboratory"></div>
+  <aside class="panel">
+    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 1</p>
+    <h1>ΦSpace <em>Dynamics</em></h1>
+    <p class="intro">Addressable space. Touchable simulation. A small, testable first step toward living XR worlds.</p>
+    <div class="truth">SIMULATED · NOT PHYSICAL MEASUREMENT</div>
+    <div class="stats"><div><strong>20,736</strong><small>LOGICAL SLOTS</small></div><div><strong>12 × 12 × 12</strong><small>SPATIAL CELLS / LAYER</small></div><div><strong>12</strong><small>DATA LAYERS</small></div></div>
+    <label for="gravity">GRAVITY PRESET</label>
+    <select id="gravity"><option value="-9.81">Earth-like · -9.81 m/s²</option><option value="-1.62">Moon-like · -1.62 m/s²</option><option value="0">Zero · 0 m/s²</option></select>
+    <label for="field">ILLUSTRATIVE FORCE FIELD</label>
+    <select id="field"><option value="off">Off</option><option value="center">Horizontal center attraction</option></select>
+    <label for="layer">INSPECTION LAYER</label>
+    <select id="layer"></select>
+    <div class="actions"><button id="pause" type="button">PAUSE</button><button id="reset" type="button">RESET</button><button id="add" type="button">ADD ORB</button></div>
+    <h2>Spatial inspector</h2>
+    <output id="inspector" aria-live="polite">Select an orb to inspect its current logical cell.</output>
+    <button id="push" type="button">PUSH SELECTED ORB</button>
+    <button id="export" type="button" class="secondary">EXPORT LOCAL SNAPSHOT</button>
+    <p class="help">Desktop: drag to orbit, scroll to zoom, click an orb to select. Quest: enter VR and point + trigger to select/push. No automatic movement of your headset camera.</p>
+    <p class="help">The 20,736 slots are a deliberately constructed <strong>3D grid × 12 information layers</strong>, not 20,736 physical dimensions, proof of a unified field, or a port of OMEGA.</p>
+    <a class="back" href="./index.html">← RETURN TO XR COMMONS</a>
+    <p id="status" role="status">LOCAL DEMO · NO MULTIPLAYER SYNC OR INPUT BRIDGE</p>
+  </aside>
+  <script type="module" src="./src/spacedynamics/main.js"></script>
+</body>
+</html>
