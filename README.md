@@ -15,9 +15,9 @@ Rung 2 builds on the original WebXR lounge with improved headset comfort, two-pe
 
 For real hardware acceptance, use [Quest 3 field test](docs/QUEST3-FIELD-TEST.md). For deployment, use [Sovereign hosting](docs/SELF-HOST.md).
 
-## ΦSpace Dynamics · Rung 1
+## ΦSpace Dynamics · Rungs 1–2
 
-Open [Space Dynamics Lab](./spacedynamics.html) from the live XR Commons frontend, or run locally with Vite. This separate WebXR/desktop scene demonstrates a 12³ cell address grid with 12 metadata layers (20,736 logical slots), selectable physics orbs, local snapshots and Quest controller interaction. Physics are illustrative, not scientific validation; multiplayer sync, full hand tracking and ΦPose bridging are not part of this rung. See [design and limitations](docs/SPACE-DYNAMICS-R1.md).
+Open [Space Dynamics Lab](./spacedynamics.html) from the live XR Commons frontend, or run locally with Vite. This separate WebXR/desktop scene demonstrates a 12³ cell address grid with 12 metadata layers (20,736 logical slots), selectable physics orbs, local snapshots and Quest controller interaction. Physics are illustrative, not scientific validation. Rung 2 adds optional two-seat **server-authoritative shared-world physics** over the existing signaling server's separate /space path, with host-only settings and guest impulses. A running WSS backend is required; GitHub Pages alone only offers solo mode. Full hand tracking and ΦPose bridging remain future work. See [Rung 1](docs/SPACE-DYNAMICS-R1.md) and [Rung 2](docs/SPACE-DYNAMICS-R2.md).
 
 ## Development
 
