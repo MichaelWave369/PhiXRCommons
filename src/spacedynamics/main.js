@@ -7,6 +7,7 @@ import {SpaceClient} from './space-client.js';
 import {hydrateSpaceWorld} from './protocol.js';
 import {createRoomCode} from '../network.js';
 import {SpaceGestureBridge} from './gesture-bridge.js';
+import {makeDemoEvidence,parseEvidenceText,evidenceAsJson,EVIDENCE_MAX_BYTES,EVIDENCE_KIND} from './evidence-layer.js';
 
 const $ = id => document.getElementById(id);
 let world = createWorld();
@@ -242,12 +243,97 @@ for(const button of document.querySelectorAll('[data-pose-symbol]')){
 }
 refreshPoseControls();
 
+
+/* Independent local Evidence Lens. No server messages, physics effects or authority. */
+const evidenceGroup=new THREE.Group();
+scene.add(evidenceGroup);
+let evidenceData=null,evidenceSelected=null;
+const evidenceMeshes=new Map();
+const markerGeometry=new THREE.OctahedronGeometry(.115,0);
+const markerColors={
+  synthetic:0xf0bb66,'reported-measurement':0x69bffd,
+  'model-output':0xa78bfa,hypothesis:0xf38a9e
+};
+function evidenceInspect(id){
+  const datum=evidenceData?.points.find(p=>p.id===id);
+  evidenceSelected=datum?.id||null;
+  if(!datum){$('evidence-inspector').textContent='Select a colored evidence marker to inspect provenance.';return;}
+  const provenance=evidenceData.provenance;
+  $('evidence-inspector').textContent=[
+    'DATASET  '+evidenceData.title,
+    'STATUS   '+EVIDENCE_KIND[provenance.kind],
+    'MARKER   '+datum.label,
+    'ADDRESS  '+datum.address+' · EVIDENCE LAYER',
+    'VALUE    '+datum.value+' '+evidenceData.unit,
+    'ABS UNC. '+(datum.uncertainty===null?'NOT GIVEN':datum.uncertainty+' '+evidenceData.unit),
+    'SOURCE   '+provenance.source,
+    'URL      '+(provenance.sourceUrl||'NOT PROVIDED'),
+    'METHOD   '+provenance.method
+  ].join('\n');
+}
+function showEvidence(data){
+  for(const mesh of evidenceMeshes.values()){
+    evidenceGroup.remove(mesh);mesh.material.dispose();
+  }
+  evidenceMeshes.clear();evidenceData=data;evidenceSelected=null;
+  $('evidence-status').textContent=data
+    ? EVIDENCE_KIND[data.provenance.kind]+' · '+data.points.length+' markers · '+data.title
+    :'No evidence dataset loaded.';
+  if(data){
+    const color=markerColors[data.provenance.kind];
+    for(const item of data.points){
+      const mesh=new THREE.Mesh(markerGeometry,
+        new THREE.MeshBasicMaterial({color,depthTest:true}));
+      mesh.position.set(item.position.x,item.position.y,item.position.z);
+      mesh.userData.evidenceId=item.id;
+      evidenceGroup.add(mesh);evidenceMeshes.set(item.id,mesh);
+    }
+  }
+  evidenceGroup.visible=$('evidence-visible').checked;
+  evidenceInspect(null);
+}
+$('evidence-visible').addEventListener('change',()=>{
+  evidenceGroup.visible=$('evidence-visible').checked;
+});
+$('evidence-demo').addEventListener('click',()=>showEvidence(makeDemoEvidence()));
+$('evidence-clear').addEventListener('click',()=>showEvidence(null));
+$('evidence-file').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];event.target.value='';
+  if(!file)return;
+  try{
+    if(file.size>EVIDENCE_MAX_BYTES)throw new RangeError('Dataset exceeds 72 KB');
+    showEvidence(parseEvidenceText(await file.text()));
+  }catch(error){
+    $('evidence-status').textContent='IMPORT REJECTED: '+String(error.message||error);
+  }
+});
+$('evidence-export').addEventListener('click',()=>{
+  if(!evidenceData){$('evidence-status').textContent='No evidence dataset to export.';return;}
+  const url=URL.createObjectURL(new Blob([evidenceAsJson(evidenceData)],{type:'application/json'}));
+  const a=document.createElement('a');
+  a.href=url;a.download='phi-space-evidence-v1.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+function hitEvidenceObject(ray){
+  const hit=ray.intersectObjects(evidenceGroup.visible?[...evidenceMeshes.values()]:[],false)[0];
+  return hit?.object?.userData?.evidenceId||null;
+}
+function animateEvidence(){
+  for(const [id,mesh] of evidenceMeshes){
+    mesh.scale.setScalar(evidenceSelected===id?1.65:1);
+    mesh.rotation.y+=.006;
+  }
+}
+showEvidence(makeDemoEvidence());
+
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
 renderer.domElement.addEventListener('pointerdown',event=>{
   if(renderer.xr.isPresenting)return;
   pointer.set(event.clientX/innerWidth*2-1,-(event.clientY/innerHeight)*2+1);
   raycaster.setFromCamera(pointer,camera);
+  const marker=hitEvidenceObject(raycaster);
+  if(marker){evidenceInspect(marker);return;}
   const hit=raycaster.intersectObjects([...meshes.values()],false)[0];
   if(hit)setSelected(hit.object.userData.bodyId);
 });
@@ -263,6 +349,8 @@ for(let i=0;i<2;i++){
       new THREE.Quaternion().setFromRotationMatrix(controller.matrixWorld));
     raycaster.ray.direction.copy(direction);
     if(raycaster.intersectObject(posePad,false).length){armFromXR();return;}
+    const marker=hitEvidenceObject(raycaster);
+    if(marker){evidenceInspect(marker);return;}
     const hit=raycaster.intersectObjects([...meshes.values()],false)[0];
     if(hit){
       const id=hit.object.userData.bodyId;setSelected(id);
@@ -290,6 +378,7 @@ renderer.setAnimationLoop((time,xrFrame)=>{
   last=time;
   if(!spaceClient.connected)stepWorld(world,dt);
   syncMeshes();
+  animateEvidence();
   const body=world.bodies.find(b=>b.id===selected);
   selectionRing.visible=Boolean(body);
   if(body) {

@@ -11,10 +11,10 @@
 <body>
   <div id="space" aria-label="Interactive three-dimensional spatial physics laboratory"></div>
   <aside class="panel">
-    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 3</p>
+    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 4</p>
     <h1>ΦSpace <em>Dynamics</em></h1>
     <p class="intro">Addressable space. Touchable simulation. A small, testable first step toward living XR worlds.</p>
-    <div class="truth">SIMULATED · NOT PHYSICAL MEASUREMENT</div>
+    <div class="truth">PHYSICS SIMULATED · IMPORTED DATA UNVERIFIED</div>
     <div class="stats"><div><strong>20,736</strong><small>LOGICAL SLOTS</small></div><div><strong>12 × 12 × 12</strong><small>SPATIAL CELLS / LAYER</small></div><div><strong>12</strong><small>DATA LAYERS</small></div></div>
     <label for="gravity">GRAVITY PRESET</label>
     <select id="gravity"><option value="-9.81">Earth-like · -9.81 m/s²</option><option value="-1.62">Moon-like · -1.62 m/s²</option><option value="0">Zero · 0 m/s²</option></select>
@@ -58,6 +58,23 @@
       </div>
       <p id="gesture-status" role="status" aria-live="polite">DISABLED · Gestures cannot affect the lab.</p>
       <p class="help">To use in Quest: enable on this page, enter XR, then trigger the floating ARM ΦPOSE panel with a controller. For hand-only entry, arm before entering XR. Each arm expires after 45 seconds.</p>
+    </section>
+    <section class="evidence-link" aria-labelledby="evidence-heading">
+      <h2 id="evidence-heading">Evidence Lens · Rung 4</h2>
+      <p class="help">View spatially located research claims as separate markers, not forces. Every imported record is unverified until independently checked. Imports never leave this device.</p>
+      <label for="evidence-file">IMPORT LOCAL DATASET JSON · MAX 72 KB / 96 MARKERS</label>
+      <input id="evidence-file" type="file" accept=".json,application/json" />
+      <label class="evidence-switch" for="evidence-visible">
+        <input id="evidence-visible" type="checkbox" checked /> SHOW EVIDENCE MARKERS
+      </label>
+      <div class="actions">
+        <button id="evidence-demo" type="button">LOAD SYNTHETIC DEMO</button>
+        <button id="evidence-clear" type="button">CLEAR</button>
+      </div>
+      <button id="evidence-export" type="button">EXPORT DATASET JSON</button>
+      <p id="evidence-status" role="status" aria-live="polite">No evidence dataset loaded.</p>
+      <output id="evidence-inspector" aria-live="polite">Select a colored evidence marker to inspect its source and address.</output>
+      <p class="help">These are illustrative marker coordinates. "Reported measurement" means the uploaded file claims measurement; it is not verified by ΦSpace Dynamics. No evidence point changes gravity, orbs, gestures, or shared rooms.</p>
     </section>
     <h2>Spatial inspector</h2>
     <output id="inspector" aria-live="polite">Select an orb to inspect its current logical cell.</output>
