@@ -28,7 +28,8 @@ test('restored world maintains nextId and can safely create new objects',()=>{
  assert.equal(w.evidence,null);
 });
 test('paused state, gravity, force field and simulation time are retained',()=>{
- const world=createWorld();stepWorld(world,.25);
+ const world=createWorld();
+ for(let i=0;i<15;i++)stepWorld(world,1/60);
  world.paused=true;world.gravity=0;world.field='center';
  const out=restoreWorld(parseWorkspaceText(workspaceToText(createWorkspace(world))));
  assert.equal(out.paused,true);assert.equal(out.gravity,0);
