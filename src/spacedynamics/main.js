@@ -8,6 +8,7 @@ import {hydrateSpaceWorld} from './protocol.js';
 import {createRoomCode} from '../network.js';
 import {SpaceGestureBridge} from './gesture-bridge.js';
 import {makeDemoEvidence,parseEvidenceText,evidenceAsJson,EVIDENCE_MAX_BYTES,EVIDENCE_KIND} from './evidence-layer.js';
+import {createWorkspace,workspaceToText,parseWorkspaceText,restoreWorld,WORKSPACE_MAX_BYTES} from './workspace.js';
 
 const $ = id => document.getElementById(id);
 let world = createWorld();
@@ -76,6 +77,7 @@ function updateSpaceControls(){
   for(const id of ['gravity','field','pause','reset'])$(id).disabled=guest;
   $('space-join').disabled=spaceClient.connected;
   $('space-leave').disabled=!spaceClient.ws;
+  workspaceControls();
 }
 $('space-server').value=location.hostname==='localhost'||location.hostname==='127.0.0.1'?'ws://127.0.0.1:8787':'';
 $('space-room').value=createRoomCode();
@@ -325,6 +327,75 @@ function animateEvidence(){
   }
 }
 showEvidence(makeDemoEvidence());
+
+/* Portable workspace gate: read-only preview, then explicitly replace solo scene. */
+let pendingWorkspace=null;
+function workspaceBusy(){return Boolean(spaceClient.ws)||spaceClient.connected;}
+function workspaceControls(){
+ const busy=workspaceBusy();
+ $('workspace-save').disabled=busy;
+ $('workspace-file').disabled=busy;
+ $('workspace-apply').disabled=busy||!pendingWorkspace;
+ if(busy){
+   $('workspace-status').textContent='SHARED WORLD ACTIVE · Solo save/restore disabled. Leave Space first.';
+ }
+}
+$('workspace-save').addEventListener('click',()=>{
+ if(workspaceBusy())return;
+ try{
+   const bundle=createWorkspace(world,evidenceData,{
+     title:$('workspace-title').value,
+     selectedOrb:selected,inspectionLayer:$('layer').value,
+     showEvidence:$('evidence-visible').checked
+   });
+   const text=workspaceToText(bundle);
+   const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+   const a=document.createElement('a');a.href=url;a.download='phi-space-workspace-v1.json';
+   a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+   $('workspace-status').textContent='Saved locally: '+bundle.title+
+     ' · '+bundle.world.bodies.length+' orbs · '+
+     (bundle.evidence?.points.length||0)+' evidence markers. No cloud storage.';
+ }catch(error){$('workspace-status').textContent='SAVE REJECTED: '+String(error.message||error);}
+});
+$('workspace-file').addEventListener('change',async event=>{
+ const file=event.target.files?.[0];event.target.value='';
+ pendingWorkspace=null;workspaceControls();
+ if(!file||workspaceBusy())return;
+ try{
+   if(file.size>WORKSPACE_MAX_BYTES)throw new RangeError('File exceeds 128 KB');
+   const proposed=parseWorkspaceText(await file.text());
+   if(workspaceBusy())throw new Error('Shared room became active during import');
+   pendingWorkspace=proposed;
+   $('workspace-status').textContent='PREVIEW · '+proposed.title+
+     ' · '+proposed.world.bodies.length+' orbs · '+
+     (proposed.evidence?.points.length||0)+' evidence markers · '+
+     'UNVERIFIED LOCAL FILE. Confirm to replace the current solo scene.';
+ }catch(error){$('workspace-status').textContent='OPEN REJECTED: '+String(error.message||error);}
+ workspaceControls();
+});
+$('workspace-apply').addEventListener('click',()=>{
+ if(!pendingWorkspace||workspaceBusy())return;
+ try{
+   const data=pendingWorkspace,restored=restoreWorld(data);
+   // Reset transient permissions only after complete validation.
+   poseBridge.disable('Workspace opened; gesture permissions revoked.');
+   world=restored;
+   selected=data.view.selectedOrb;
+   $('layer').value=data.view.inspectionLayer;
+   $('gravity').value=String(world.gravity);$('field').value=world.field;
+   $('pause').textContent=world.paused?'RESUME':'PAUSE';
+   $('evidence-visible').checked=data.view.showEvidence;
+   showEvidence(data.evidence);
+   $('workspace-title').value=data.title;
+   pendingWorkspace=null;workspaceControls();refreshPoseControls();showInspector();
+   $('workspace-status').textContent='OPENED LOCAL WORKSPACE · '+data.title+
+     ' · no network synchronization or scientific verification.';
+ }catch(error){
+   pendingWorkspace=null;workspaceControls();
+   $('workspace-status').textContent='RESTORE REJECTED: '+String(error.message||error);
+ }
+});
+workspaceControls();
 
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();

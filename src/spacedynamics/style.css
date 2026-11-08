@@ -33,3 +33,10 @@ label{display:block;font-size:10px;letter-spacing:.12em;color:#8dc6c7;font-weigh
  border-radius:7px;padding:11px;font:10px/1.55 ui-monospace,monospace;color:#e6d9bd;min-height:70px;margin:10px 0}
 .evidence-link .actions button{font-size:9px}
 .evidence-link #evidence-export{font-size:10px}
+
+.workspace-link{border:1px solid #648ab080;background:#10222fbd;border-radius:10px;padding:13px;margin:18px 0}
+.workspace-link h2{margin-top:0!important}
+.workspace-link input{display:block;width:100%;border:1px solid #4a7380;border-radius:7px;background:#091b2a;color:#efffff;padding:9px;font-size:11px}
+.workspace-link input[type=file]{padding:5px;font-size:10px}
+.workspace-link #workspace-status{font-size:10px;line-height:1.5;color:#c0e5f2}
+.workspace-link button:disabled{opacity:.35;cursor:not-allowed}
