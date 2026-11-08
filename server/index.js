@@ -2,9 +2,11 @@ import http from 'node:http';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
+import { createSpaceHub } from './space-hub.js';
 
 export async function createSignalingServer({ port = 8787, host = '127.0.0.1' } = {}) {
   const rooms = new Map();
+  const spaceHub = createSpaceHub();
   const server = http.createServer((req, res) => {
     if (req.url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -27,7 +29,9 @@ export async function createSignalingServer({ port = 8787, host = '127.0.0.1' } 
     else rooms.delete(ws.room);
     ws.room = null;
   }
-  wss.on('connection', ws => {
+  wss.on('connection', (ws, req) => {
+    if (req.url?.split('?')[0] === '/space') { spaceHub.accept(ws); return; }
+    if (req.url?.split('?')[0] !== '/') { ws.close(1008, 'Unknown route'); return; }
     ws.room = null;
     ws.name = 'Explorer';
     ws.countWindow = Date.now();
@@ -84,7 +88,8 @@ export async function createSignalingServer({ port = 8787, host = '127.0.0.1' } 
     ws.on('error', () => leave(ws));
   });
   await new Promise((ok, fail) => { server.once('error', fail); server.listen(port, host, ok); });
-  return { server, wss, rooms, close: async () => {
+  return { server, wss, rooms, spaceRooms: spaceHub.rooms, close: async () => {
+    spaceHub.close();
     for (const client of wss.clients) client.terminate();
     await new Promise(ok => wss.close(ok));
     await new Promise(ok => server.close(ok));

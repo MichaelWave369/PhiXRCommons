@@ -11,7 +11,7 @@
 <body>
   <div id="space" aria-label="Interactive three-dimensional spatial physics laboratory"></div>
   <aside class="panel">
-    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 1</p>
+    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 2</p>
     <h1>ΦSpace <em>Dynamics</em></h1>
     <p class="intro">Addressable space. Touchable simulation. A small, testable first step toward living XR worlds.</p>
     <div class="truth">SIMULATED · NOT PHYSICAL MEASUREMENT</div>
@@ -23,14 +23,25 @@
     <label for="layer">INSPECTION LAYER</label>
     <select id="layer"></select>
     <div class="actions"><button id="pause" type="button">PAUSE</button><button id="reset" type="button">RESET</button><button id="add" type="button">ADD ORB</button></div>
+    <section class="space-link">
+      <h2>Two explorers · one spatial world</h2>
+      <p class="help">Optional server-authoritative shared physics. Requires a separate running WSS signaling service, not GitHub Pages alone.</p>
+      <label for="space-server">SPACE SERVER (WSS)</label>
+      <input id="space-server" autocomplete="url" spellcheck="false" placeholder="wss://your-server.example" />
+      <label for="space-room">ROOM CODE (8 CHARACTERS)</label>
+      <div class="actions"><input id="space-room" maxlength="8" spellcheck="false" placeholder="8-character code" />
+        <button type="button" id="space-generate" aria-label="Generate a room code">↻</button></div>
+      <div class="actions"><button type="button" id="space-join">LINK SPACE</button><button type="button" id="space-leave" disabled>LEAVE SPACE</button></div>
+      <p id="space-state" role="status" aria-live="polite">SOLO MODE · LOCAL WORLD</p>
+    </section>
     <h2>Spatial inspector</h2>
     <output id="inspector" aria-live="polite">Select an orb to inspect its current logical cell.</output>
     <button id="push" type="button">PUSH SELECTED ORB</button>
     <button id="export" type="button" class="secondary">EXPORT LOCAL SNAPSHOT</button>
-    <p class="help">Desktop: drag to orbit, scroll to zoom, click an orb to select. Quest: enter VR and point + trigger to select/push. No automatic movement of your headset camera.</p>
+    <p class="help">Desktop: drag to orbit, scroll to zoom, click an orb to select. Quest: enter VR and point + trigger to select/push. No automatic movement of your headset camera. Multiplayer orbs require a WSS server and matching room code.</p>
     <p class="help">The 20,736 slots are a deliberately constructed <strong>3D grid × 12 information layers</strong>, not 20,736 physical dimensions, proof of a unified field, or a port of OMEGA.</p>
     <a class="back" href="./index.html">← RETURN TO XR COMMONS</a>
-    <p id="status" role="status">LOCAL DEMO · NO MULTIPLAYER SYNC OR INPUT BRIDGE</p>
+    <p id="status" role="status">SOLO BY DEFAULT · OPTIONAL SHARED SERVER PHYSICS · NO GESTURE BRIDGE</p>
   </aside>
   <script type="module" src="./src/spacedynamics/main.js"></script>
 </body>

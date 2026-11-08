@@ -3,6 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import {LAYERS,createWorld,addBody,applyImpulse,stepWorld,addressAt,decodeAddress,snapshot} from './core.js';
 import './style.css';
+import {SpaceClient} from './space-client.js';
+import {hydrateSpaceWorld} from './protocol.js';
+import {createRoomCode} from '../network.js';
 
 const $ = id => document.getElementById(id);
 let world = createWorld();
@@ -43,6 +46,45 @@ border.position.y=4;scene.add(border);
 const geometry = new THREE.IcosahedronGeometry(1,2);
 const colors = [0x5ce7d6,0x7fa7ff,0xffd380,0xc5a8ff,0x9ff0ff];
 const meshes = new Map();
+
+const roomLabel=$('space-state');
+let lerpFrom=new Map(),lastNetworkFrame=0;
+const spaceClient=new SpaceClient({
+  status(info){
+    if(info.phase==='joined')roomLabel.textContent='ROOM '+info.room+' · '+(info.role===1?'HOST':'GUEST')+' · SERVER PHYSICS';
+    else if(info.phase==='connecting')roomLabel.textContent='CONNECTING TO SPACE SERVER…';
+    else roomLabel.textContent='SOLO MODE · LOCAL WORLD';
+    updateSpaceControls();
+  },
+  error(msg){roomLabel.textContent=msg;},
+  receipt(msg){if(msg.accepted===false)roomLabel.textContent='ACTION DENIED · '+msg.code;},
+  peerJoined(){roomLabel.textContent='SECOND EXPLORER CONNECTED · SHARED WORLD';},
+  snapshot(packet){
+    lerpFrom=new Map([...meshes].map(([id,mesh])=>[id,mesh.position.clone()]));
+    world=hydrateSpaceWorld(packet);
+    lastNetworkFrame=performance.now();
+    if(!world.bodies.some(b=>b.id===selected))selected=world.bodies[0]?.id||null;
+    $('gravity').value=String(world.gravity);$('field').value=world.field;
+    $('pause').textContent=world.paused?'RESUME':'PAUSE';
+    updateSpaceControls();
+  }
+});
+function updateSpaceControls(){
+  const guest=spaceClient.connected&&spaceClient.role!==1;
+  for(const id of ['gravity','field','pause','reset'])$(id).disabled=guest;
+  $('space-join').disabled=spaceClient.connected;
+  $('space-leave').disabled=!spaceClient.ws;
+}
+$('space-server').value=location.hostname==='localhost'||location.hostname==='127.0.0.1'?'ws://127.0.0.1:8787':'';
+$('space-room').value=createRoomCode();
+$('space-generate').addEventListener('click',()=>{$('space-room').value=createRoomCode();});
+$('space-join').addEventListener('click',()=>{
+  try{spaceClient.connect($('space-server').value,$('space-room').value);}
+  catch(error){roomLabel.textContent=error.message;}
+});
+$('space-leave').addEventListener('click',()=>spaceClient.disconnect());
+addEventListener('beforeunload',()=>spaceClient.disconnect());
+
 function syncMeshes() {
   for(const body of world.bodies) {
     if(!meshes.has(body.id)) {
@@ -56,6 +98,11 @@ function syncMeshes() {
     }
     const mesh=meshes.get(body.id);
     mesh.position.set(body.p.x,body.p.y,body.p.z);
+    if(spaceClient.connected&&lerpFrom.has(body.id)){
+      const alpha=Math.min(1,(performance.now()-lastNetworkFrame)/120);
+      mesh.position.lerpVectors(lerpFrom.get(body.id),
+        new THREE.Vector3(body.p.x,body.p.y,body.p.z),alpha);
+    }
     mesh.scale.setScalar(body.r);
     mesh.material.emissive.setHex(body.id===selected?0x399d89:0x0d3038);
   }
@@ -93,24 +140,28 @@ for(const layer of LAYERS) {
   const option=document.createElement('option');option.value=layer;option.textContent=layer.toUpperCase();
   $('layer').appendChild(option);
 }
-$('gravity').addEventListener('change',()=>{world.gravity=Number($('gravity').value);});
-$('field').addEventListener('change',()=>{world.field=$('field').value;});
+$('gravity').addEventListener('change',()=>{const value=Number($('gravity').value);if(spaceClient.connected)spaceClient.command('gravity',{value});else world.gravity=value;});
+$('field').addEventListener('change',()=>{const value=$('field').value;if(spaceClient.connected)spaceClient.command('field',{value});else world.field=value;});
 $('layer').addEventListener('change',showInspector);
 $('pause').addEventListener('click',()=>{
+  if(spaceClient.connected){spaceClient.command('pause');return;}
   world.paused=!world.paused;
   $('pause').textContent=world.paused?'RESUME':'PAUSE';
 });
 $('reset').addEventListener('click',()=>{
+  if(spaceClient.connected){spaceClient.command('reset');return;}
   world=createWorld();selected='orb-1';
   $('gravity').value=String(world.gravity);$('field').value=world.field;
   $('pause').textContent='PAUSE';showInspector();
 });
 $('add').addEventListener('click',()=>{
+  if(spaceClient.connected){spaceClient.command('add');return;}
   const id=addBody(world);
   $('status').textContent=id?'Created '+id+' locally. Not network-synced.':'Local orb limit reached (24).';
   if(id)setSelected(id);
 });
 $('push').addEventListener('click',()=>{
+  if(spaceClient.connected){spaceClient.command('push',{id:selected,vector:{x:0,y:4,z:-3}});return;}
   if(applyImpulse(world,selected,{x:0,y:4,z:-3}))$('status').textContent='Applied a local impulse to '+selected+'.';
 });
 $('export').addEventListener('click',()=>{
@@ -142,7 +193,9 @@ for(let i=0;i<2;i++){
     const hit=raycaster.intersectObjects([...meshes.values()],false)[0];
     if(hit){
       const id=hit.object.userData.bodyId;setSelected(id);
-      applyImpulse(world,id,{x:direction.x*5,y:direction.y*5,z:direction.z*5});
+      const impulse={x:direction.x*5,y:direction.y*5,z:direction.z*5};
+      if(spaceClient.connected)spaceClient.command('push',{id,vector:impulse});
+      else applyImpulse(world,id,impulse);
     }
   });
 }
@@ -156,7 +209,7 @@ let last=0,frame=0;
 renderer.setAnimationLoop(time=>{
   const dt=last?Math.min((time-last)/1000,.1):0;
   last=time;
-  stepWorld(world,dt);
+  if(!spaceClient.connected)stepWorld(world,dt);
   syncMeshes();
   const body=world.bodies.find(b=>b.id===selected);
   selectionRing.visible=Boolean(body);
