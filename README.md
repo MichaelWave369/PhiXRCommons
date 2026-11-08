@@ -15,6 +15,10 @@ Rung 2 builds on the original WebXR lounge with improved headset comfort, two-pe
 
 For real hardware acceptance, use [Quest 3 field test](docs/QUEST3-FIELD-TEST.md). For deployment, use [Sovereign hosting](docs/SELF-HOST.md).
 
+## ΦSpace Dynamics · Rung 1
+
+Open [Space Dynamics Lab](./spacedynamics.html) from the live XR Commons frontend, or run locally with Vite. This separate WebXR/desktop scene demonstrates a 12³ cell address grid with 12 metadata layers (20,736 logical slots), selectable physics orbs, local snapshots and Quest controller interaction. Physics are illustrative, not scientific validation; multiplayer sync, full hand tracking and ΦPose bridging are not part of this rung. See [design and limitations](docs/SPACE-DYNAMICS-R1.md).
+
 ## Development
 
 Requires Node 20+. Install with npm install. In one terminal run npm run server; in another run npm run dev. Open two tabs at the Vite URL with the same eight-character room code. On Quest, serve the frontend over HTTPS and use a reachable wss:// signaling endpoint. Localhost on a headset is the headset itself.
