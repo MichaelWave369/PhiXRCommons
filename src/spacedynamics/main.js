@@ -6,6 +6,7 @@ import './style.css';
 import {SpaceClient} from './space-client.js';
 import {hydrateSpaceWorld} from './protocol.js';
 import {createRoomCode} from '../network.js';
+import {SpaceGestureBridge} from './gesture-bridge.js';
 
 const $ = id => document.getElementById(id);
 let world = createWorld();
@@ -170,6 +171,77 @@ $('export').addEventListener('click',()=>{
   const a=document.createElement('a');a.href=url;a.download='phi-space-dynamics-r1.json';
   a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
+
+const poseBridge=new SpaceGestureBridge({
+ onAction(id){
+   if(id==='spacedynamics.select-next'){
+     if(!world.bodies.length)return;
+     const index=world.bodies.findIndex(b=>b.id===selected);
+     setSelected(world.bodies[(index+1)%world.bodies.length].id);
+   }
+   if(id==='spacedynamics.push'){
+     if(!world.bodies.some(b=>b.id===selected))return;
+     const vector={x:0,y:4,z:-3};
+     const applied=spaceClient.connected?spaceClient.command('push',{id:selected,vector})
+       :applyImpulse(world,selected,vector);
+     if(!applied)$('gesture-status').textContent='Recognized; push not applied.';
+   }
+ },
+ onStatus(message){$('gesture-status').textContent=message;}
+});
+function poseTexture(heading,sub){
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
+ const ctx=canvas.getContext('2d');ctx.fillStyle='#082532';ctx.fillRect(0,0,512,256);
+ ctx.strokeStyle='#70e6cf';ctx.lineWidth=8;ctx.strokeRect(12,12,488,232);
+ ctx.fillStyle='#a1ffe7';ctx.font='bold 38px sans-serif';ctx.textAlign='center';
+ ctx.fillText(heading,256,113);ctx.font='24px sans-serif';ctx.fillText(sub,256,165);
+ const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+const posePad=new THREE.Mesh(new THREE.PlaneGeometry(1.5,.67),
+ new THREE.MeshBasicMaterial({map:poseTexture('ΦPOSE DISABLED','ENABLE IN PANEL'),side:THREE.DoubleSide}));
+posePad.position.set(0,1.45,-2.4);scene.add(posePad);
+let displayedPoseState='';
+function refreshPoseControls(){
+ const now=performance.now();poseBridge.tick(now);
+ $('gesture-enable').disabled=poseBridge.enabled;
+ $('gesture-arm').disabled=!poseBridge.enabled;
+ $('gesture-disable').disabled=!poseBridge.enabled;
+ $('gesture-synthetic').disabled=poseBridge.enabled;
+ $('gesture-action').disabled=poseBridge.armed;
+ $('gesture-demo').hidden=!$('gesture-synthetic').checked;
+ const label=poseBridge.armed?'ΦPOSE ARMED':poseBridge.enabled?'ARM ΦPOSE':'ΦPOSE DISABLED';
+ if(label!==displayedPoseState){
+   displayedPoseState=label;
+   posePad.material.map?.dispose();
+   posePad.material.map=poseTexture(label,poseBridge.enabled?'TRIGGER TO ARM':'ENABLE IN PANEL');
+   posePad.material.needsUpdate=true;
+ }
+}
+function armFromXR(){
+ if(poseBridge.enabled)poseBridge.arm($('gesture-action').value,performance.now());
+ refreshPoseControls();
+}
+$('gesture-enable').addEventListener('click',()=>{
+ const demo=$('gesture-synthetic').checked;
+ poseBridge.enable(performance.now(),{source:demo?'synthetic':'webxr',allowSyntheticDemo:demo});
+ refreshPoseControls();
+});
+$('gesture-arm').addEventListener('click',()=>{armFromXR();});
+$('gesture-disable').addEventListener('click',()=>{poseBridge.disable();refreshPoseControls();});
+$('gesture-synthetic').addEventListener('change',()=>{poseBridge.disable('Source changed; re-enable');refreshPoseControls();});
+$('gesture-action').addEventListener('change',()=>{
+ poseBridge.cancel('Action changed; re-arm');refreshPoseControls();
+});
+for(const button of document.querySelectorAll('[data-pose-symbol]')){
+ button.addEventListener('click',()=>{
+   const result=poseBridge.synthetic(button.dataset.poseHand,button.dataset.poseSymbol,performance.now());
+   if(!result.accepted && result.reason!=='step_completed')
+     $('gesture-status').textContent='Demo token: '+result.reason;
+   refreshPoseControls();
+ });
+}
+refreshPoseControls();
+
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
 renderer.domElement.addEventListener('pointerdown',event=>{
@@ -190,6 +262,7 @@ for(let i=0;i<2;i++){
     const direction=new THREE.Vector3(0,0,-1).applyQuaternion(
       new THREE.Quaternion().setFromRotationMatrix(controller.matrixWorld));
     raycaster.ray.direction.copy(direction);
+    if(raycaster.intersectObject(posePad,false).length){armFromXR();return;}
     const hit=raycaster.intersectObjects([...meshes.values()],false)[0];
     if(hit){
       const id=hit.object.userData.bodyId;setSelected(id);
@@ -203,10 +276,16 @@ renderer.xr.addEventListener('sessionstart',()=>{
   $('status').textContent='QUEST MODE · POINT AND TRIGGER TO SELECT/PUSH · ROOM SYNC OFF';
 });
 renderer.xr.addEventListener('sessionend',()=>{
+  poseBridge.disable('XR session ended; gestures disabled.');
+  refreshPoseControls();
   $('status').textContent='LOCAL DEMO · NO MULTIPLAYER SYNC OR INPUT BRIDGE';
 });
-let last=0,frame=0;
-renderer.setAnimationLoop(time=>{
+let last=0,frame=0,gestureFrame=0;
+renderer.setAnimationLoop((time,xrFrame)=>{
+  if(renderer.xr.isPresenting&&poseBridge.armed)
+    poseBridge.sample(xrFrame,renderer.xr.getSession(),renderer.xr.getReferenceSpace(),time);
+  else poseBridge.tick(time);
+  if(++gestureFrame%30===0)refreshPoseControls();
   const dt=last?Math.min((time-last)/1000,.1):0;
   last=time;
   if(!spaceClient.connected)stepWorld(world,dt);

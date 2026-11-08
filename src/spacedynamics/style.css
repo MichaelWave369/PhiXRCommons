@@ -18,3 +18,8 @@ label{display:block;font-size:10px;letter-spacing:.12em;color:#8dc6c7;font-weigh
 .space-link h2{margin:0 0 8px!important}.space-link input{min-width:0;background:#071722;color:#eaffff;border:1px solid #4d747c;border-radius:7px;padding:10px;width:100%;font-size:11px}
 .space-link .actions input{flex:1}.space-link .actions button{flex:1}
 #space-generate{flex:0 0 45px}.space-link #space-state{font-size:10px;color:#a0e2db;line-height:1.5}
+
+.gesture-link{border:1px solid #368e80a0;border-radius:10px;padding:13px;margin:18px 0;background:#092b2cb5}
+.gesture-link h2{margin-top:0!important}.gesture-link #gesture-status{font-size:10px;color:#aaefdd;line-height:1.5}
+.gesture-opt{display:flex;align-items:center;gap:9px;line-height:1.5;letter-spacing:normal}
+.gesture-opt input{accent-color:#6ce8d6}.gesture-link .actions button{font-size:9px}.gesture-link button:disabled{opacity:.35;cursor:not-allowed}

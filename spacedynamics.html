@@ -11,7 +11,7 @@
 <body>
   <div id="space" aria-label="Interactive three-dimensional spatial physics laboratory"></div>
   <aside class="panel">
-    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 2</p>
+    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 3</p>
     <h1>ΦSpace <em>Dynamics</em></h1>
     <p class="intro">Addressable space. Touchable simulation. A small, testable first step toward living XR worlds.</p>
     <div class="truth">SIMULATED · NOT PHYSICAL MEASUREMENT</div>
@@ -34,6 +34,31 @@
       <div class="actions"><button type="button" id="space-join">LINK SPACE</button><button type="button" id="space-leave" disabled>LEAVE SPACE</button></div>
       <p id="space-state" role="status" aria-live="polite">SOLO MODE · LOCAL WORLD</p>
     </section>
+    <section class="gesture-link" aria-labelledby="gesture-heading">
+      <h2 id="gesture-heading">OverStrings · ΦPose R3</h2>
+      <p class="help">Opt-in, one-shot hand gesture actions. Nothing is enabled automatically. Requires Quest WebXR hand tracking for real input.</p>
+      <label for="gesture-action">SPATIAL ACTION</label>
+      <select id="gesture-action">
+        <option value="spacedynamics.select-next">SELECT NEXT ORB · L:open &gt; R:pinch</option>
+        <option value="spacedynamics.push">PUSH SELECTED · R:open &gt; R:pinch</option>
+      </select>
+      <label class="gesture-opt" for="gesture-synthetic"><input id="gesture-synthetic" type="checkbox" /> Enable synthetic button demo instead of WebXR hands</label>
+      <div class="actions">
+        <button id="gesture-enable" type="button">ENABLE 2 MIN</button>
+        <button id="gesture-arm" type="button" disabled>ARM ONCE</button>
+        <button id="gesture-disable" type="button" disabled>DISABLE</button>
+      </div>
+      <div id="gesture-demo" hidden>
+        <p class="help">Synthetic tests only, not observed physical hand movement.</p>
+        <div class="actions">
+          <button type="button" data-pose-hand="left" data-pose-symbol="open">L:open</button>
+          <button type="button" data-pose-hand="right" data-pose-symbol="open">R:open</button>
+          <button type="button" data-pose-hand="right" data-pose-symbol="pinch">R:pinch</button>
+        </div>
+      </div>
+      <p id="gesture-status" role="status" aria-live="polite">DISABLED · Gestures cannot affect the lab.</p>
+      <p class="help">To use in Quest: enable on this page, enter XR, then trigger the floating ARM ΦPOSE panel with a controller. For hand-only entry, arm before entering XR. Each arm expires after 45 seconds.</p>
+    </section>
     <h2>Spatial inspector</h2>
     <output id="inspector" aria-live="polite">Select an orb to inspect its current logical cell.</output>
     <button id="push" type="button">PUSH SELECTED ORB</button>
@@ -41,7 +66,7 @@
     <p class="help">Desktop: drag to orbit, scroll to zoom, click an orb to select. Quest: enter VR and point + trigger to select/push. No automatic movement of your headset camera. Multiplayer orbs require a WSS server and matching room code.</p>
     <p class="help">The 20,736 slots are a deliberately constructed <strong>3D grid × 12 information layers</strong>, not 20,736 physical dimensions, proof of a unified field, or a port of OMEGA.</p>
     <a class="back" href="./index.html">← RETURN TO XR COMMONS</a>
-    <p id="status" role="status">SOLO BY DEFAULT · OPTIONAL SHARED SERVER PHYSICS · NO GESTURE BRIDGE</p>
+    <p id="status" role="status">SOLO BY DEFAULT · OPTIONAL SHARED SERVER PHYSICS · OPTIONAL GESTURES · EXPLICIT OPT-IN</p>
   </aside>
   <script type="module" src="./src/spacedynamics/main.js"></script>
 </body>
