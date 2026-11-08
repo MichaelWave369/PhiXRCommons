@@ -9,6 +9,7 @@ import {createRoomCode} from '../network.js';
 import {SpaceGestureBridge} from './gesture-bridge.js';
 import {makeDemoEvidence,parseEvidenceText,evidenceAsJson,EVIDENCE_MAX_BYTES,EVIDENCE_KIND} from './evidence-layer.js';
 import {createWorkspace,workspaceToText,parseWorkspaceText,restoreWorld,WORKSPACE_MAX_BYTES} from './workspace.js';
+import {sceneFromWorkspace,sceneToText,parseSceneText,SCENE_MAX_BYTES} from './scene-interchange.js';
 
 const $ = id => document.getElementById(id);
 let world = createWorld();
@@ -397,12 +398,124 @@ $('workspace-apply').addEventListener('click',()=>{
 });
 workspaceControls();
 
+/* ΦScene Bridge: imported previews are visual-only and never touch world / WSS. */
+const foreignSceneGroup=new THREE.Group();
+scene.add(foreignSceneGroup);
+let stagedScene=null,visibleScene=null,selectedSceneNode=null;
+const sceneMeshes=new Map();
+const ghostSphereGeometry=new THREE.IcosahedronGeometry(1,1);
+const ghostMarkerGeometry=new THREE.OctahedronGeometry(1,0);
+function showSceneStatus(text){$('scene-status').textContent=text;}
+function inspectSceneNode(id){
+ selectedSceneNode=id;
+ const node=visibleScene?.nodes.find(n=>n.id===id);
+ if(!node){
+   $('scene-inspector').textContent='Click a read-only ghost sphere or marker to inspect the source claim.';
+   return;
+ }
+ const info=['SCENE    '+visibleScene.title,'CREATOR  '+visibleScene.creator,
+  'STATUS   '+visibleScene.truth,'NODE     '+node.label,
+  'TYPE     '+node.kind,'POSITION '+
+    [node.position.x,node.position.y,node.position.z].map(n=>n.toFixed(2)).join(', ')+' m'];
+ if(node.metadata){
+   info.push('SOURCE   '+node.metadata.source);
+   info.push('CLAIM    '+EVIDENCE_KIND[node.metadata.kind]);
+   info.push('VALUE    '+node.metadata.value+' '+node.metadata.unit);
+   info.push('ABS UNC. '+(node.metadata.uncertainty===null?'NOT PROVIDED':
+     node.metadata.uncertainty+' '+node.metadata.unit));
+   info.push('URL      '+(node.metadata.sourceUrl||'NOT PROVIDED'));
+   info.push('METHOD   '+node.metadata.method);
+ }
+ $('scene-inspector').textContent=info.join('\n');
+}
+function clearSceneGhosts(){
+ for(const mesh of sceneMeshes.values()){
+   foreignSceneGroup.remove(mesh);
+   mesh.material.dispose();
+ }
+ sceneMeshes.clear();visibleScene=null;selectedSceneNode=null;
+ inspectSceneNode(null);
+}
+function showSceneGhosts(next){
+ clearSceneGhosts();
+ visibleScene=next;
+ if(!next)return;
+ for(const node of next.nodes){
+   const geom=node.kind==='sphere'?ghostSphereGeometry:ghostMarkerGeometry;
+   const mat=new THREE.MeshBasicMaterial({
+     color:node.kind==='sphere'?0xa1cbff:0xeea1ff,
+     transparent:true,opacity:.48,wireframe:true,depthTest:true,depthWrite:false
+   });
+   const mesh=new THREE.Mesh(geom,mat);
+   mesh.position.set(node.position.x,node.position.y,node.position.z);
+   mesh.scale.setScalar(node.radius*1.2);
+   mesh.userData.sceneNodeId=node.id;
+   foreignSceneGroup.add(mesh);sceneMeshes.set(node.id,mesh);
+ }
+ foreignSceneGroup.visible=$('scene-visible').checked;
+}
+function hitSceneNode(ray){
+ if(!foreignSceneGroup.visible)return null;
+ const hit=ray.intersectObjects([...sceneMeshes.values()],false)[0];
+ return hit?.object?.userData?.sceneNodeId||null;
+}
+function animateSceneGhosts(){
+ for(const [id,mesh] of sceneMeshes){
+   mesh.material.opacity=id===selectedSceneNode?.8:.4;
+   if(mesh.userData.sceneNodeId!==selectedSceneNode)mesh.rotation.y+=.002;
+ }
+}
+$('scene-export').addEventListener('click',()=>{
+ try{
+   // Reuse the R5 canonical serializer, including source-claim validation.
+   const w=createWorkspace(world,evidenceData,{title:$('workspace-title').value,
+     selectedOrb:selected,inspectionLayer:$('layer').value,
+     showEvidence:$('evidence-visible').checked});
+   const packet=sceneFromWorkspace(w);
+   const text=sceneToText(packet);
+   const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+   const a=document.createElement('a');a.href=url;a.download='phi-spatial-scene-v1.json';
+   a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+   showSceneStatus('EXPORTED '+packet.nodes.length+' DISPLAY-ONLY NODES · '+packet.title+
+     ' · No physics commands, room credentials, or gesture permissions.');
+ }catch(error){showSceneStatus('EXPORT REJECTED: '+String(error.message||error));}
+});
+$('scene-file').addEventListener('change',async event=>{
+ const file=event.target.files?.[0];event.target.value='';
+ stagedScene=null;$('scene-preview').disabled=true;
+ if(!file)return;
+ try{
+   if(file.size>SCENE_MAX_BYTES)throw new RangeError('File exceeds 96 KB');
+   const candidate=parseSceneText(await file.text());
+   stagedScene=candidate;
+   $('scene-preview').disabled=false;
+   showSceneStatus('STAGED '+candidate.title+' · '+candidate.creator+' · '+candidate.nodes.length+
+     ' passive nodes. Not loaded into physics. Press SHOW READ-ONLY GHOSTS to preview.');
+ }catch(error){showSceneStatus('IMPORT REJECTED: '+String(error.message||error));}
+});
+$('scene-preview').addEventListener('click',()=>{
+ if(!stagedScene)return;
+ showSceneGhosts(stagedScene);
+ showSceneStatus('PREVIEWING '+visibleScene.nodes.length+' read-only ghost nodes · '+visibleScene.truth+
+   ' · No interaction with physics or shared rooms.');
+});
+$('scene-clear').addEventListener('click',()=>{
+ stagedScene=null;$('scene-preview').disabled=true;
+ clearSceneGhosts();
+ showSceneStatus('PREVIEW CLEARED · no changes to simulation.');
+});
+$('scene-visible').addEventListener('change',()=>{
+ foreignSceneGroup.visible=$('scene-visible').checked;
+});
+
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
 renderer.domElement.addEventListener('pointerdown',event=>{
   if(renderer.xr.isPresenting)return;
   pointer.set(event.clientX/innerWidth*2-1,-(event.clientY/innerHeight)*2+1);
   raycaster.setFromCamera(pointer,camera);
+  const ghost=hitSceneNode(raycaster);
+  if(ghost){inspectSceneNode(ghost);return;}
   const marker=hitEvidenceObject(raycaster);
   if(marker){evidenceInspect(marker);return;}
   const hit=raycaster.intersectObjects([...meshes.values()],false)[0];
@@ -450,6 +563,7 @@ renderer.setAnimationLoop((time,xrFrame)=>{
   if(!spaceClient.connected)stepWorld(world,dt);
   syncMeshes();
   animateEvidence();
+  animateSceneGhosts();
   const body=world.bodies.find(b=>b.id===selected);
   selectionRing.visible=Boolean(body);
   if(body) {

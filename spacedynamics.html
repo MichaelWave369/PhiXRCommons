@@ -11,7 +11,7 @@
 <body>
   <div id="space" aria-label="Interactive three-dimensional spatial physics laboratory"></div>
   <aside class="panel">
-    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 5</p>
+    <p class="eyebrow">Φ369 LABS / XR COMMONS / RUNG 6</p>
     <h1>ΦSpace <em>Dynamics</em></h1>
     <p class="intro">Addressable space. Touchable simulation. A small, testable first step toward living XR worlds.</p>
     <div class="truth">PHYSICS SIMULATED · IMPORTED DATA UNVERIFIED</div>
@@ -89,6 +89,20 @@
       <button type="button" id="workspace-apply" disabled>CONFIRM OPEN &amp; REPLACE SOLO SCENE</button>
       <p id="workspace-status" role="status" aria-live="polite">No workspace staged. Choose a file to preview before loading.</p>
       <p class="help">Workspace files cannot change shared rooms, launch code, activate gestures, or verify scientific claims. Saving and restoring the solo simulation is disabled while joining or connected to a shared room.</p>
+    </section>
+    <section class="scene-bridge" aria-labelledby="scene-bridge-heading">
+      <h2 id="scene-bridge-heading">ΦScene Bridge · Rung 6</h2>
+      <p class="help">Portable, display-only 3D scene format for future PhiOS XR and other app adapters. Scene files cannot execute commands or change the physics lab.</p>
+      <button id="scene-export" type="button">EXPORT PASSIVE SCENE JSON</button>
+      <label for="scene-file">INSPECT IMPORTED SCENE · 96 KB MAX / 120 NODES</label>
+      <input id="scene-file" type="file" accept=".json,application/json" />
+      <div class="actions">
+        <button id="scene-preview" type="button" disabled>SHOW READ-ONLY GHOSTS</button>
+        <button id="scene-clear" type="button">CLEAR GHOSTS</button>
+      </div>
+      <label class="scene-switch" for="scene-visible"><input id="scene-visible" type="checkbox" checked /> SHOW IMPORTED GHOSTS</label>
+      <p id="scene-status" role="status" aria-live="polite">No external scene loaded. This is a file-level adapter contract, not automatic integration with other applications.</p>
+      <output id="scene-inspector" aria-live="polite">Select a ghost marker to inspect its unverified visualization metadata.</output>
     </section>
     <h2>Spatial inspector</h2>
     <output id="inspector" aria-live="polite">Select an orb to inspect its current logical cell.</output>
